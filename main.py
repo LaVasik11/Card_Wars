@@ -1,24 +1,31 @@
+import inspect
 import sys
 import pygame
 import random
-from heroes import Hero, Warrior, Mage, Archer
+from heroes import *
 
 
 pygame.init()
 
 
-size = width, height = 1260, 1020
+size = width, height = 1400, 1020
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("Карточные войны")
 background_image = pygame.image.load("images/card_wars/деревянный_стол_фон.png").convert()
 background_image = pygame.transform.scale(background_image, (width, height))
+
+
+move_points = 2
+font = pygame.font.Font(None, 36)
+text_color = (255, 255, 255)
+
 
 num_rectangles = 4
 horizontal_gap = 20
 vertical_gap = 20
 
 # Рассчет ширины и высоты прямоугольников
-rect_width = (width - (num_rectangles + 1) * horizontal_gap) // num_rectangles
+rect_width = (width - (num_rectangles + 1) * horizontal_gap) // num_rectangles - 70
 rect_height = (height - 3 * vertical_gap) // 2 - 160
 
 # Загрузка изображений
@@ -31,21 +38,38 @@ blue_plain = pygame.transform.scale(blue_plain, (rect_width, rect_height))
 top_space = vertical_gap
 bottom_space = height - (2 * vertical_gap + 2 * rect_height)
 
-additional_rect_width = (width - (num_rectangles + 1) * horizontal_gap) // 6 - 7
-additional_rect_height = rect_width - 50
+player_cards_width = (width - (num_rectangles + 1) * horizontal_gap) // 6 - 7
+player_cards_height = rect_width
 
-center_offset_x = (rect_width - additional_rect_width) // 2
-center_offset_y = (rect_height - additional_rect_height) // 2
+center_offset_x = (rect_width - player_cards_width) // 2
+center_offset_y = (rect_height - player_cards_height) // 2
+
+
+shirt_card = pygame.image.load("images/card_wars/рубашка_карты.jpg")
+shirt_card = pygame.transform.scale(shirt_card, (player_cards_width, player_cards_height))
+shirt_card_rect = pygame.Rect(width - rect_width, 400, rect_width, rect_height)
+
+
+button_width = 150
+button_height = 40
+button_x = width - button_width - 20
+button_y = height - button_height - 20
+button_color = (0, 128, 0)
+end_move_button_color = (255, 255, 255)
+button_font = pygame.font.Font(None, 24)
+button_text = button_font.render("Завершить ход", True, end_move_button_color)
+end_move = button_text.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
 
 def is_clicked(rect, pos):
     return rect.collidepoint(pos)
 
+
 # Создание прямоугольников и их координат
 additional_rectangles = []
-for i in range(6):
-    x = horizontal_gap + i * (additional_rect_width + horizontal_gap)
-    y = height - vertical_gap - additional_rect_height
-    rect = pygame.Rect(x, y, additional_rect_width, additional_rect_height)
+for i in range(5):
+    x = horizontal_gap + i * (player_cards_width + horizontal_gap)
+    y = height - vertical_gap - player_cards_height
+    rect = pygame.Rect(x, y, player_cards_width, player_cards_height)
     additional_rectangles.append(rect)
 
 
@@ -60,54 +84,140 @@ class HeroCard:
     def __init__(self, hero_class, x, y):
         self.hero = hero_class()
         self.icon = self.hero.icon
-        self.rect = pygame.Rect(x, y, additional_rect_width, additional_rect_height)
+        self.rect = pygame.Rect(x, y, player_cards_width, player_cards_height)
 
 
-initial_additional_rect_coordinates = [(rect.x, rect.y) for rect in additional_rectangles]
 additional_rectangles_info = []
-for i, coords in enumerate(initial_additional_rect_coordinates):
-    random_hero_class = random.choice(hero_classes)
+
+hero_classes_dict = {name: cls for name, cls in globals().items() if inspect.isclass(cls) and issubclass(cls, Hero)}
+card_count = {cls: 0 for cls in hero_classes_dict.values()}
+
+
+def choose_random_card():
+    available_cards = [card_class for card_class in hero_classes if card_count[card_class] < 2]
+    if not available_cards:
+        return None
+    random_card_class = random.choice(available_cards)
+    card_count[random_card_class] += 1
+    return random_card_class
+
+
+for i, coords in enumerate(additional_rectangles):
+    random_hero_class = choose_random_card()
+    if not random_hero_class:
+        break
     additional_rect = HeroCard(random_hero_class, coords[0], coords[1])
     additional_rectangles_info.append(additional_rect)
 
 
+move_points_text_color = (255, 255, 255)
+last_color_change_time = 0
+font = pygame.font.Font(None, 36)
+
+player_move = True
+
+
+def add_card():
+    global additional_rectangles
+
+    cord_x = None
+    cord_y = None
+    count_cards = len(additional_rectangles)
+    additional_rectangles = []
+    for i in range(count_cards+1):
+        x = horizontal_gap + i * (player_cards_width + horizontal_gap)
+        y = height - vertical_gap - player_cards_height
+        cord_x = x
+        cord_y = y
+        rect = pygame.Rect(x, y, player_cards_width, player_cards_height)
+        additional_rectangles.append(rect)
+
+    random_hero_class = choose_random_card()
+    additional_rect = HeroCard(random_hero_class, cord_x, cord_y)
+    additional_rectangles_info.append(additional_rect)
+
 running = True
 while running:
+    current_time = pygame.time.get_ticks()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
 
-            # Проверяем, был ли клик на одном из дополнительных прямоугольников
-            for i, rect in enumerate(additional_rectangles):
-                if is_clicked(rect, pos):
-                    # Добавляем проверку, чтобы позволить сменить выбор, если другой дополнительный прямоугольник не был перемещен
-                    if i not in moved_additional_rectangles or (selected_rectangle is not None and i == selected_rectangle):
-                        selected_rectangle = i
-                        print(f"Дополнительный прямоугольник {i + 1} выбран.")
-                        break
+            mouse_x, mouse_y = event.pos
 
-            # Проверяем, был ли клик на одном из нижних прямоугольников для перемещения выбранного дополнительного прямоугольника
-            if selected_rectangle is not None:
-                for i in range(num_rectangles):
-                    x = horizontal_gap + i * (rect_width + horizontal_gap)
-                    y = height - bottom_space - rect_height
-                    rect = pygame.Rect(x, y, rect_width, rect_height)
-                    if is_clicked(rect, pos) and i not in occupied_lower_rects:
-                        # Расчет новых координат для центрирования дополнительного прямоугольника внутри нижнего
-                        new_x = x + center_offset_x
-                        new_y = y + center_offset_y
-                        moved_additional_rectangles[selected_rectangle] = (new_x, new_y)
-                        occupied_lower_rects.add(i)
-                        print(
-                            f"Дополнительный прямоугольник {selected_rectangle + 1} перемещен в центр прямоугольника {i + 1}.")
-                        selected_rectangle = None  # Сбрасываем выбор после перемещения
-                        break
+            if button_x <= mouse_x <= button_x + button_width and button_y <= mouse_y <= button_y + button_height:
+                player_move = False
+
+            if player_move:
+                if shirt_card_rect.collidepoint(event.pos):
+                    if move_points >= 1:
+                        move_points -= 1
+                        add_card()
+                        print("Вы взяли карту")
+
+                    else:
+                        move_points_text_color = (255, 0, 0)
+                        last_color_change_time = current_time
+
+
+
+
+                # Проверяем, был ли клик на одном из дополнительных прямоугольников
+                for i, rect in enumerate(additional_rectangles):
+                    if is_clicked(rect, pos):
+                        # Добавляем проверку, чтобы позволить сменить выбор, если другой дополнительный прямоугольник не был перемещен
+                        if i not in moved_additional_rectangles or (selected_rectangle is not None and i == selected_rectangle):
+                            selected_rectangle = i
+                            print(f"Дополнительный прямоугольник {i + 1} выбран.")
+                            break
+
+                # Проверяем, был ли клик на одном из нижних прямоугольников для перемещения выбранного дополнительного прямоугольника
+                if selected_rectangle is not None:
+                    for i in range(num_rectangles):
+                        x = horizontal_gap + i * (rect_width + horizontal_gap)
+                        y = height - bottom_space - rect_height
+                        rect = pygame.Rect(x, y, rect_width, rect_height)
+                        if is_clicked(rect, pos) and i not in occupied_lower_rects:
+                            if selected_rectangle is not None:
+                                card_info = additional_rectangles_info[selected_rectangle]
+                                card_cost = card_info.hero.cost
+                                if move_points >= card_cost:
+                                    new_x = x + center_offset_x
+                                    new_y = y + center_offset_y
+                                    moved_additional_rectangles[selected_rectangle] = (new_x, new_y)
+                                    occupied_lower_rects.add(i)
+                                    move_points -= card_cost
+
+                                    print(
+                                        f"Дополнительный прямоугольник {selected_rectangle + 1} перемещен в центр прямоугольника {i + 1}.")
+                                else:
+                                    move_points_text_color = (255, 0, 0)
+                                    last_color_change_time = current_time
+                                selected_rectangle = None
+                            break
 
     screen.fill((0, 0, 0))
     screen.blit(background_image, (0, 0))
 
+    move_points_text = font.render(f"Move Points: {move_points}", True, move_points_text_color)
+    move_points_text_rect = move_points_text.get_rect()
+    move_points_text_rect.topright = (width - 10, 10)
+    screen.blit(move_points_text, move_points_text_rect)
+
+    move_text = font.render(f"Move: {'you' if player_move else 'enemy'}", True, text_color)
+    move_text_rect = move_text.get_rect()
+    move_text_rect.topright = (width - 10, 30)
+    screen.blit(move_text, move_text_rect)
+
+    screen.blit(shirt_card, (width - rect_width, 400))
+
+    pygame.draw.rect(screen, button_color, (button_x, button_y, button_width, button_height))
+    screen.blit(button_text, end_move)
+
+    if current_time - last_color_change_time > 500:
+        move_points_text_color = (255, 255, 255)
 
     for i in range(num_rectangles):
         x = horizontal_gap + i * (rect_width + horizontal_gap)
@@ -121,17 +231,17 @@ while running:
 
     for i, rect in enumerate(additional_rectangles):
         if i in moved_additional_rectangles:
-            card = pygame.image.load(additional_rectangles_info[i].icon)
-            card = pygame.transform.scale(card, (additional_rect_width, additional_rect_height))
+            card = pygame.transform.scale(additional_rectangles_info[i].icon, (player_cards_width, player_cards_height))
             screen.blit(card, moved_additional_rectangles[i])
         else:
-            card = pygame.image.load(additional_rectangles_info[i].icon)
-            card = pygame.transform.scale(card, (additional_rect_width, additional_rect_height))
+            card = pygame.transform.scale(additional_rectangles_info[i].icon, (player_cards_width, player_cards_height))
             screen.blit(card, rect)
             if selected_rectangle == i:
                 pygame.draw.rect(screen, (167, 252, 0), rect, 3)
+
 
     pygame.display.flip()
 
 pygame.quit()
 sys.exit()
+
