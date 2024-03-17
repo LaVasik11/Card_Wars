@@ -17,7 +17,7 @@ background_image = pygame.transform.scale(background_image, (width, height))
 
 
 move_points = 2
-count_cards = 5
+count_player_cards = 5
 font = pygame.font.Font(None, 36)
 text_color = (255, 255, 255)
 
@@ -63,6 +63,10 @@ end_move_button_color = (255, 255, 255)
 button_font = pygame.font.Font(None, 24)
 button_text = button_font.render("Завершить ход", True, end_move_button_color)
 end_move = button_text.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
+
+
+count_corn_fields = 4
+
 
 def is_clicked(rect, pos):
     return rect.collidepoint(pos)
@@ -124,13 +128,13 @@ player_move = True
 cards_on_field = []
 
 def add_card():
-    global count_cards
+    global count_player_cards
     global additional_rectangles
 
-    count_cards += 1
+    count_player_cards += 1
     count_cards = len(additional_rectangles)
     additional_rectangles = []
-    for i in range(count_cards+1):
+    for i in range(count_cards + 1):
         x = horizontal_gap + i * (player_cards_width + horizontal_gap)
         y = height - vertical_gap - player_cards_height
         rect = pygame.Rect(x, y, player_cards_width, player_cards_height)
@@ -222,7 +226,7 @@ while running:
                 player_move = False
 
             if player_move:
-                if shirt_card_rect.collidepoint(event.pos) and count_cards < 5:
+                if shirt_card_rect.collidepoint(event.pos) and count_player_cards < 5:
                     if move_points >= 1:
                         move_points -= 1
                         add_card()
@@ -231,6 +235,8 @@ while running:
                     else:
                         move_points_text_color = (255, 0, 0)
                         last_color_change_time = current_time
+                else:
+                    print(count_player_cards)
 
 
                 # Проверяем, был ли клик на одном из дополнительных прямоугольников
@@ -261,7 +267,7 @@ while running:
                                     occupied_lower_rects.add(i)
                                     move_points -= card_cost
                                     cards_on_field.append(((new_x, new_y), card_info, i))
-                                    count_cards -= 1
+                                    count_player_cards -= 1
 
                                     print(
                                         f"Дополнительный прямоугольник {selected_rectangle + 1} перемещен в центр прямоугольника {i + 1}.")
@@ -273,6 +279,7 @@ while running:
             else:
                 print(enemy(cards_on_field))
                 player_move = True
+                move_points = 2
 
     screen.fill((0, 0, 0))
     screen.blit(background_image, (0, 0))

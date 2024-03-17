@@ -17,7 +17,7 @@ class Mage(Hero):
 
 class Archer(Hero):
     def __init__(self):
-        super().__init__(hp=0, damage=0, cost=2, icon="images/card_wars/heroes/Кожурыцарь.jpg")
+        super().__init__(hp=8, damage=4, cost=2, icon="images/card_wars/heroes/Кожурыцарь.jpg")
 
 class Archers(Hero):
     def __init__(self):
