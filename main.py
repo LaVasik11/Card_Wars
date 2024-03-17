@@ -3,6 +3,7 @@ import sys
 import pygame
 import random
 from heroes import *
+from script_enemy import enemy
 
 
 pygame.init()
@@ -32,9 +33,11 @@ rect_height = (height - 3 * vertical_gap) // 2 - 160
 # Загрузка изображений
 corn_fields = pygame.image.load("images/card_wars/кукурузные_поля.jpg")
 corn_fields = pygame.transform.scale(corn_fields, (rect_width, rect_height))
+corn_fields = pygame.transform.rotate(corn_fields, 180)
 
 blue_plain = pygame.image.load("images/card_wars/синяя_равнина.png")
 blue_plain = pygame.transform.scale(blue_plain, (rect_width, rect_height))
+blue_plain = pygame.transform.rotate(blue_plain, 180)
 
 top_space = vertical_gap
 bottom_space = height - (2 * vertical_gap + 2 * rect_height)
@@ -141,12 +144,12 @@ def draw_fields():
     for i in range(num_rectangles):
         x = horizontal_gap + i * (rect_width + horizontal_gap)
         y = top_space
-        screen.blit(corn_fields, (x, y))
+        screen.blit(blue_plain, (x, y))
 
     for i in range(num_rectangles):
         x = horizontal_gap + i * (rect_width + horizontal_gap)
         y = height - bottom_space - rect_height
-        screen.blit(blue_plain, (x, y))
+        screen.blit(corn_fields, (x, y))
 
 
 def draw_widgets():
@@ -176,6 +179,9 @@ def draw_cards():
     for i, _ in enumerate(additional_rectangles):
         if i not in moved_additional_rectangles:
             card = pygame.transform.scale(additional_rectangles_info[i].icon, (player_cards_width, player_cards_height))
+            # Рисуем урон и ХП на карте
+            draw_text_on_card(card, additional_rectangles_info[i].hero.damage, (8, card.get_height() - 28))
+            draw_text_on_card(card, additional_rectangles_info[i].hero.hp, (card.get_width() - 25, card.get_height() - 25))
             x = horizontal_gap + c * (player_cards_width + horizontal_gap)
             y = height - vertical_gap - player_cards_height
             rect = pygame.Rect(x, y, player_cards_width, player_cards_height)
@@ -187,9 +193,18 @@ def draw_cards():
 
 
 def draw_cards_on_fields():
-    for i, info in cards_on_field:
+    for i, info, _ in cards_on_field:
         card = pygame.transform.scale(info.hero.icon, (player_cards_width, player_cards_height))
+        # Рисуем урон и ХП на карте
+        draw_text_on_card(card, info.hero.damage, (8, card.get_height() - 28))
+        draw_text_on_card(card, info.hero.hp, (card.get_width() - 25, card.get_height() - 25))
         screen.blit(card, i)
+
+
+def draw_text_on_card(image, text, position, font_size=36, text_color=(255, 255, 255)):
+    font = pygame.font.Font(None, font_size)
+    text_surface = font.render(str(text), True, text_color)
+    image.blit(text_surface, position)
 
 
 running = True
@@ -245,7 +260,7 @@ while running:
                                     moved_additional_rectangles[selected_rectangle] = (new_x, new_y)
                                     occupied_lower_rects.add(i)
                                     move_points -= card_cost
-                                    cards_on_field.append(((new_x, new_y), card_info))
+                                    cards_on_field.append(((new_x, new_y), card_info, i))
                                     count_cards -= 1
 
                                     print(
@@ -255,6 +270,9 @@ while running:
                                     last_color_change_time = current_time
                                 selected_rectangle = None
                             break
+            else:
+                print(enemy(cards_on_field))
+                player_move = True
 
     screen.fill((0, 0, 0))
     screen.blit(background_image, (0, 0))
