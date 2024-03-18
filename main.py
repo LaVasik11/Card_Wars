@@ -101,6 +101,8 @@ hero_classes_dict = {name: cls for name, cls in globals().items() if inspect.isc
 card_count = {cls: 0 for cls in hero_classes_dict.values()}
 
 
+cards_on_enemy_field = set()
+
 def choose_random_card():
     available_cards = [card_class for card_class in hero_classes if card_count[card_class] < 2]
     if not available_cards:
@@ -202,13 +204,26 @@ def draw_cards_on_fields():
         # Рисуем урон и ХП на карте
         draw_text_on_card(card, info.hero.damage, (8, card.get_height() - 28))
         draw_text_on_card(card, info.hero.hp, (card.get_width() - 25, card.get_height() - 25))
-        screen.blit(card, i)
+        screen.blit(card, (i[0], i[1] - 30))
 
 
 def draw_text_on_card(image, text, position, font_size=36, text_color=(255, 255, 255)):
     font = pygame.font.Font(None, font_size)
     text_surface = font.render(str(text), True, text_color)
     image.blit(text_surface, position)
+
+def draw_enemy_cards_on_fields():
+    for pos, hero, field_index in cards_on_enemy_field:
+        card_icon = pygame.transform.rotate(hero.icon, 180)  # Поворот иконки на 180 градусов
+        card_icon = pygame.transform.scale(card_icon, (player_cards_width, player_cards_height))
+        if field_index < num_rectangles:
+            x = horizontal_gap + field_index * (rect_width + horizontal_gap)
+            y = top_space + 30
+            screen.blit(card_icon, (x + (rect_width - player_cards_width) / 2, y + (rect_height - player_cards_height) / 2))
+        # else:
+        #     x = horizontal_gap + (field_index - num_rectangles) * (rect_width + horizontal_gap)
+        #     y = height - bottom_space - rect_height
+        #     screen.blit(card_icon, (x + (rect_width - player_cards_width) / 2, y + (rect_height - player_cards_height) / 2))
 
 
 running = True
@@ -270,14 +285,17 @@ while running:
                                     count_player_cards -= 1
 
                                     print(
-                                        f"Дополнительный прямоугольник {selected_rectangle + 1} перемещен в центр прямоугольника {i + 1}.")
+                                        f"Дополнительный прямоугольник {selected_rectangle + 1} "
+                                        f"перемещен в центр прямоугольника {i + 1}."
+                                    )
                                 else:
                                     move_points_text_color = (255, 0, 0)
                                     last_color_change_time = current_time
                                 selected_rectangle = None
                             break
             else:
-                print(enemy(cards_on_field))
+                cards_on_enemy_field = set(enemy(cards_on_field, cards_on_enemy_field))
+                print(cards_on_enemy_field)
                 player_move = True
                 move_points = 2
 
@@ -288,6 +306,7 @@ while running:
     draw_fields()
     draw_cards()
     draw_cards_on_fields()
+    draw_enemy_cards_on_fields()
 
     pygame.display.flip()
 
