@@ -68,6 +68,9 @@ end_move = button_text.get_rect(center=(button_x + button_width // 2, button_y +
 count_corn_fields = 4
 
 
+player_hp = 25
+enemy_hp = 25
+
 def is_clicked(rect, pos):
     return rect.collidepoint(pos)
 
@@ -166,9 +169,9 @@ def draw_widgets():
     move_points_text_rect.topright = (width - 10, 10)
     screen.blit(move_points_text, move_points_text_rect)
 
-    move_text = font.render(f"Move: {'you' if player_move else 'enemy'}", True, text_color)
+    move_text = font.render(f"your: {player_hp} | enemy: {enemy_hp}", True, text_color)
     move_text_rect = move_text.get_rect()
-    move_text_rect.topright = (width - 10, 30)
+    move_text_rect.topright = (width - 10, 40)
     screen.blit(move_text, move_text_rect)
 
     screen.blit(shirt_card, (width - rect_width, 400))
@@ -207,23 +210,52 @@ def draw_cards_on_fields():
         screen.blit(card, (i[0], i[1] - 30))
 
 
-def draw_text_on_card(image, text, position, font_size=36, text_color=(255, 255, 255)):
+def draw_text_on_card(image, text, position, font_size=36, text_color=(255, 255, 255), rotate=False):
     font = pygame.font.Font(None, font_size)
     text_surface = font.render(str(text), True, text_color)
+    if rotate:
+        text_surface = pygame.transform.rotate(text_surface, 180)  # Поворачиваем текст на 180 градусов
+
+        position = (position[0] - text_surface.get_width(), position[1] - text_surface.get_height())
     image.blit(text_surface, position)
 
 def draw_enemy_cards_on_fields():
     for pos, hero, field_index in cards_on_enemy_field:
-        card_icon = pygame.transform.rotate(hero.icon, 180)  # Поворот иконки на 180 градусов
+        card_icon = pygame.transform.rotate(hero.icon, 0)  # Поворот иконки на 180 градусов
         card_icon = pygame.transform.scale(card_icon, (player_cards_width, player_cards_height))
         if field_index < num_rectangles:
             x = horizontal_gap + field_index * (rect_width + horizontal_gap)
             y = top_space + 30
+
             screen.blit(card_icon, (x + (rect_width - player_cards_width) / 2, y + (rect_height - player_cards_height) / 2))
-        # else:
-        #     x = horizontal_gap + (field_index - num_rectangles) * (rect_width + horizontal_gap)
-        #     y = height - bottom_space - rect_height
-        #     screen.blit(card_icon, (x + (rect_width - player_cards_width) / 2, y + (rect_height - player_cards_height) / 2))
+
+            card_rect = pygame.Rect(x + (rect_width - player_cards_width) / 2,
+                                    y + (rect_height - player_cards_height) / 2,
+                                    player_cards_width, player_cards_height)
+
+            if is_mouse_over_card(card_rect):
+                draw_text_on_card(card_icon, hero.damage, (8, card_icon.get_height() - 24), rotate=False)
+                draw_text_on_card(card_icon, hero.hp, (card_icon.get_width() - 20, card_icon.get_height() - 24),
+                                  rotate=False)
+
+                card_icon = pygame.transform.scale(card_icon,
+                                                   (rect_width, rect_height))
+                card_icon = pygame.transform.rotate(card_icon, 0)
+                screen.blit(card_icon, (x, y-30))
+            else:
+                draw_text_on_card(card_icon, hero.damage, (8, card_icon.get_height() - 24), rotate=False)
+                draw_text_on_card(card_icon, hero.hp, (card_icon.get_width() - 20, card_icon.get_height() - 24), rotate=False)
+
+
+                card_icon = pygame.transform.scale(card_icon, (player_cards_width, player_cards_height))
+                card_icon = pygame.transform.rotate(card_icon, 180)
+                screen.blit(card_icon, card_rect.topleft)
+
+
+
+def is_mouse_over_card(card_rect):
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    return card_rect.collidepoint(mouse_x, mouse_y)
 
 
 running = True
@@ -294,7 +326,7 @@ while running:
                                 selected_rectangle = None
                             break
             else:
-                cards_on_enemy_field = set(enemy(cards_on_field, cards_on_enemy_field))
+                cards_on_enemy_field.update(set(enemy(cards_on_field, cards_on_enemy_field)))
                 print(cards_on_enemy_field)
                 player_move = True
                 move_points = 2
