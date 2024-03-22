@@ -97,7 +97,6 @@ class HeroCard:
         self.icon = self.hero.icon
 
 
-
 additional_rectangles_info = []
 
 hero_classes_dict = {name: cls for name, cls in globals().items() if inspect.isclass(cls) and issubclass(cls, Hero)}
@@ -133,8 +132,7 @@ player_move = True
 cards_on_field = []
 
 def add_card():
-    global count_player_cards
-    global additional_rectangles
+    global count_player_cards, additional_rectangles
 
     count_player_cards += 1
     count_cards = len(additional_rectangles)
@@ -252,10 +250,47 @@ def draw_enemy_cards_on_fields():
                 screen.blit(card_icon, card_rect.topleft)
 
 
-
 def is_mouse_over_card(card_rect):
     mouse_x, mouse_y = pygame.mouse.get_pos()
     return card_rect.collidepoint(mouse_x, mouse_y)
+
+def fight():
+    global player_hp
+    global enemy_hp
+    global cards_on_field
+    global cards_on_enemy_field
+
+    enemy_hero = {i[2]: (i[1], i[0]) for i in cards_on_enemy_field}
+    player_hero = {i[2]: (i[1], i[0]) for i in cards_on_field}
+    used_hero = []
+
+    dead_enemy_hero = []
+    dead_player_hero = []
+
+    for field, hero in enemy_hero.items():
+        if field in player_hero:
+            player_hero[field][0].hero.hp -= hero[0].damage
+            hero[0].hp -= player_hero[field][0].hero.damage
+            if hero[0].hp <= 0:
+                dead_enemy_hero.append(field)
+            if player_hero[field][0].hero.hp <= 0:
+                dead_player_hero.append(field)
+            used_hero.append(field)
+        else:
+            player_hp -= hero[0].damage
+
+    for i in dead_player_hero:
+        del player_hero[i]
+        occupied_lower_rects.remove(i)
+    for i in dead_enemy_hero:
+        del enemy_hero[i]
+
+    for field, hero in player_hero.items():
+        if field not in used_hero:
+            enemy_hp -= hero[0].hero.damage
+
+    cards_on_enemy_field = set((v[1], v[0], k) for k, v in enemy_hero.items())
+    cards_on_field = [(v[1], v[0], k) for k, v in player_hero.items()]
 
 
 running = True
@@ -327,7 +362,8 @@ while running:
                             break
             else:
                 cards_on_enemy_field.update(set(enemy(cards_on_field, cards_on_enemy_field)))
-                print(cards_on_enemy_field)
+                fight()
+                add_card()
                 player_move = True
                 move_points = 2
 
