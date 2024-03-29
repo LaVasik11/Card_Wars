@@ -186,7 +186,6 @@ def draw_cards():
     for i, _ in enumerate(additional_rectangles):
         if i not in moved_additional_rectangles:
             card = pygame.transform.scale(additional_rectangles_info[i].icon, (player_cards_width, player_cards_height))
-            # Рисуем урон и ХП на карте
             draw_text_on_card(card, additional_rectangles_info[i].hero.damage, (8, card.get_height() - 28))
             draw_text_on_card(card, additional_rectangles_info[i].hero.hp, (card.get_width() - 25, card.get_height() - 25))
             x = horizontal_gap + c * (player_cards_width + horizontal_gap)
@@ -219,14 +218,14 @@ def draw_text_on_card(image, text, position, font_size=36, text_color=(255, 255,
 
 def draw_enemy_cards_on_fields():
     for pos, hero, field_index in cards_on_enemy_field:
-        card_icon = pygame.transform.rotate(hero.icon, 0)  # Поворот иконки на 180 градусов
+        print(cards_on_enemy_field)
+        print(cards_on_field)
+        card_icon = pygame.transform.rotate(hero.icon, 0)
         card_icon = pygame.transform.scale(card_icon, (player_cards_width, player_cards_height))
         if field_index < num_rectangles:
-            x = horizontal_gap + field_index * (rect_width + horizontal_gap)
-            y = top_space + 30
+            x, y = pos
 
             screen.blit(card_icon, (x + (rect_width - player_cards_width) / 2, y + (rect_height - player_cards_height) / 2))
-
             card_rect = pygame.Rect(x + (rect_width - player_cards_width) / 2,
                                     y + (rect_height - player_cards_height) / 2,
                                     player_cards_width, player_cards_height)
@@ -244,7 +243,6 @@ def draw_enemy_cards_on_fields():
                 draw_text_on_card(card_icon, hero.damage, (8, card_icon.get_height() - 24), rotate=False)
                 draw_text_on_card(card_icon, hero.hp, (card_icon.get_width() - 20, card_icon.get_height() - 24), rotate=False)
 
-
                 card_icon = pygame.transform.scale(card_icon, (player_cards_width, player_cards_height))
                 card_icon = pygame.transform.rotate(card_icon, 180)
                 screen.blit(card_icon, card_rect.topleft)
@@ -255,10 +253,7 @@ def is_mouse_over_card(card_rect):
     return card_rect.collidepoint(mouse_x, mouse_y)
 
 def fight():
-    global player_hp
-    global enemy_hp
-    global cards_on_field
-    global cards_on_enemy_field
+    global player_hp, enemy_hp, cards_on_field, cards_on_enemy_field
 
     enemy_hero = {i[2]: (i[1], i[0]) for i in cards_on_enemy_field}
     player_hero = {i[2]: (i[1], i[0]) for i in cards_on_field}
@@ -361,9 +356,10 @@ while running:
                                 selected_rectangle = None
                             break
             else:
-                cards_on_enemy_field.update(set(enemy(cards_on_field, cards_on_enemy_field)))
+                cards_on_enemy_field.update(set(enemy(cards_on_field, horizontal_gap, rect_width, top_space, cards_on_enemy_field)))
                 fight()
-                add_card()
+                if count_player_cards < 5:
+                    add_card()
                 player_move = True
                 move_points = 2
 
